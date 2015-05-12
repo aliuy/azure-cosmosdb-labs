@@ -7,7 +7,7 @@ In this lab, you will learn how to:
  * [Create a DocumentDB database account](#creating-a-documentdb-database-account)
  * [Import data using the DocumentDB data migration tool](#import-data-to-documentdb)
  * [Run queries using the DocumentDB Query Explorer](#run-queries-using-query-explorer)
- * 
+ * [Create and execute a stored procedure using DocumentDB Studio](#sproc-docdb-studio)
 
 <a name="creating-a-documentdb-database-account"></a>
 ## Create a DocumentDB database account
@@ -25,7 +25,6 @@ In this lab, you will learn how to:
 3. In the **New DocumentDB** blade, specify the desired configuration for the DocumentDB account. 
  
 	![Screen shot of the New DocumentDB blade][3] 
-
 
 	- In the **Id** box, enter a name to identify the DocumentDB account. This value becomes the host name within the URI. The **Id** may contain only lowercase letters, numbers, and the '-' character, and must be between 3 and 50 characters. Note that *documents.azure.com* is appended to the endpoint name you choose, the result of which will become your DocumentDB account endpoint.
 
@@ -46,9 +45,9 @@ In this lab, you will learn how to:
 
 	![Screen shot of the Notifications hub, showing that the DocumentDB account was created successfully and deployed to a resource group][6]
 
-5.	While the account is provisioning, familiarize yourself with DocumentDB's SQL query grammer by trying out some sample queries on the [DocumentDB Query Playground](http://www.documentdb.com/sql/demo).
+5.	While the account is provisioning, familiarize yourself with DocumentDB's SQL query grammar by trying out some sample queries on the [DocumentDB Query Playground](http://www.documentdb.com/sql/demo).
 
-	![Screenshot of query playground](./media/queryplayground.png)
+	![Screenshot of query playground][0]
 
 6.	After the DocumentDB account has been created, it is ready for use with the default settings.
 
@@ -76,13 +75,13 @@ The migration tool is open source and can be found on GitHub in [this repository
 
 The JSON file source importer option allows you to import one or more single document JSON files or JSON files that each contain an array of JSON documents.  When adding folders that contain JSON files to import, you have the option of recursively searching for files in subfolders.
 
-1.  Download the [sample JSON data set](https://raw.githubusercontent.com/aliuy/azure-documentdb-labs/master/DataCamp/AWProductsAndCategories.json) from our Github repository.
+1.  Download the [sample JSON data set](https://raw.githubusercontent.com/aliuy/azure-documentdb-labs/master/DataCamp/AWProductsAndCategories.json) from our GitHub repository.
 
 2.	Download the migration tool from the [Microsoft Download Center](http://www.microsoft.com/downloads/details.aspx?FamilyID=cda7703a-2774-4c07-adcc-ad02ddc1a44d).
 
 3.	Extract the migration tool to a directory of your choice.
 
-4.	Run Dtui.exe to open the graphical interface version of the tool
+4.	Run **Dtui.exe** to open the graphical interface version of the tool
 
 5.	Once the **Welcome** screen displays, click **next** to proceed.
 
@@ -195,10 +194,261 @@ The DocumentDB Query Explorer enables you to create, edit, and run queries again
 			JOIN c IN pc.SubCategories
 			WHERE pc.DocType = "ProductCategory"
 
-## Create and execute a stored procedure using DocumentDB Studio
+<a name="sproc-docdb-studio"></a>
+## Create and execute a Stored Procedure using DocumentDB Studio
 
+### Overview of DocumentDB's Server-Side JavaScript
+
+Azure DocumentDB supports the transactional execution of JavaScript logic natively inside the database engine. The approach of using JavaScript as a modern day T-SQL provides developers a rich and familiar interface to implement business logic. This is expressed in the form of stored procedures, triggers, and user-defined functions (UDFs). In this section, we will take a closer look at DocumentDB’s interpretation of stored procedures.
+
+A major advantage with stored procedures is that they enable applications to perform complex batches and sequences of operations directly inside the database engine, closer to the data. Developers can group and sequence operations (like inserts, updates, or deletes) and submit them together. The benefit here is that the network traffic latency costs for batching and sequencing operations can completely avoided.
+
+<div style="text-align: center;">
+	<br/>
+	<img src="media/sprocs-fig1.png"/>
+	<br/>
+	<i>A sequence of database operations.</i>
+	<br/>
+</div>
+
+<div style="text-align: center;">
+	<br/>
+	<img src="media/sprocs-fig2.png"/>
+	<br/>
+	<i>A sequence of database operations using Stored Procedures.</i>
+	<br/>
+</div>
+
+Another important thing to note is that DocumentDB offers full ACID (Atomicity, Consistency, Isolation, and Durability) guarantees for all operations that take part of a single stored procedure. In other words, stored procedures enable applications to combine related operations in a single batch so that either all of them succeed or none of them succeed. This is interesting because few NoSQL databases provide ACID transactions across multiple documents / records.
+
+### Managing server-side scripts with DocumentDB Studio
+
+To easily create and execute a stored procedure, let's take a look at the Azure DocumentDB Studio.
+
+The Azure DocumentDB Studio is an open-source client viewer/explorer for managing your Azure DocumentDB service. It features the ability to:
+
+- Easily browse DocumentDB resources and learn more about the DocumentDB resource model. 
+- Perform Create, Read, Update, Delete (CRUD) and Query operations for every DocumentDB resource. 
+- Create and execute Server-Side Javascript (Stored Procedures, Triggers, and User-Defined Functions). 
+- Inspect headers (e.g. RU charge) for every request operation.
+
+Let's get started...
+
+1.	Download the DocumentDB Studio from its [Github repository](https://github.com/mingaliu/DocumentDBStudio/releases). You can get the latest compiled binary by clicking the [DocumentDbStudio.zip](https://github.com/mingaliu/DocumentDBStudio/releases/download/0.50/DocumentDbStudio.zip) link.
+
+2.	Extract DocumentDbStudio.zip to a directory of your choice.
+
+3.	Run **DocumentDBStudio.exe** to open the application.
+
+4.	Click **File** => **Add Account** to add your DocumentDB account.
+
+5.	Fill in your DocumentDB account's endpoint and authentication key in to the pop-up dialogue box. Click **OK** to proceed.
+
+	> Note: You can find this info in the DocumentDB Account Key's blade in the Azure Portal.
+
+	![Screen shot of the DocumentDB Studio Account Settings dialogue box][15]
+
+6.	Navigate to the collection you created in the previous sections by expanding your DocumentDB account, database, and collection in the left-navigation.
+
+	![Screen shot of the DocumentDB Studio][16]
+
+7.	Right click **StoredProcedures** on the left-navigation and click **Create StoredProcedure**
+
+	![Screen shot of the DocumentDB Studio][17]
+
+8.	The following example Stored Procedure enables users to review products with a numeric rating and comment.
+
+	The script updates an existing product document to hold a product rating object (which contains a moving average for multiple product ratings) and creates a new review document containing the reviewer's name and comments as an atomic transaction.
+
+	Fill in `reviewProduct` as the **Id** for the new Stored Procedure.
+
+	And copy + paste the following script as the Stored Procedure's body:
+
+        /**
+         * A DocumentDB stored procedure for reviewing a product.<br/>
+         *
+         * @function
+         * @param {string} productNumber - The ProductNumber for the product being reviewed.
+         * @param {string} reviewer - The name of the reviewer.
+         * @param {number} rating - A numerical product rating for the review.
+         * @param {string} comment - The reviewer's comments.
+         */
+        function reviewProduct(productNumber, reviewer, rating, comment) {
+            var collection = getContext().getCollection();
+            var collectionLink = collection.getSelfLink();
+            var response = getContext().getResponse();
+        
+            // Validate input.
+            if (typeof productNumber != "string") throw new Error("The productNumber is invalid.");
+            if (typeof reviewer != "string") throw new Error("The reviewer is invalid.");
+            if (typeof rating != "number") throw new Error("The rating is invalid.");
+            if (typeof comment != "string") throw new Error("The comment is invalid.");
+        
+            // Create a review document and update the product.
+            createReviewDoc(productNumber, reviewer, rating, comment, function (error, reviewDoc) {
+                if (error) throw error;
+        
+                // Update the product document.
+                updateProductDoc(productNumber, rating, function(error, productDoc) {
+                    if(error) throw error;
+        
+                    var responseBody = {
+                        product: productDoc,
+                        review: reviewDoc
+                    }
+        
+                    // Return the new review document and updated product document in the response.
+                    response.setBody(responseBody);
+                })
+            });
+        
+            // Helper Functions
+            /*
+             * Creates a rating document.
+             */
+            function createReviewDoc(productNumber, reviewer, rating, comment, callback) {
+                var ratingDoc = {
+                    productNumber: productNumber,
+                    reviewer: reviewer,
+                    rating: rating,
+                    comment: comment
+                }
+        
+                var isAccepted = collection.createDocument(collectionLink, ratingDoc, function (error, document) {
+                    if (error) throw error;
+        
+                    callback(error, document);
+                });
+        
+                if (!isAccepted) throw new Error("Failed to create rating document.");
+            }
+        
+            /*
+             * Creates or updates the Rating property inside a product document.
+             */
+            function updateProductDoc(productNumber, rating, callback) {
+        
+                // Query for the product.
+                var query = {
+                    query: "select * from root r where r.ProductNumber = @id",
+                    parameters: [{name: "@id", value: productNumber}]
+                };
+                var isAccepted = collection.queryDocuments(collectionLink, query, {}, function (error, documents) {
+                    if (error) throw error;
+                    if (documents.length != 1) throw new Error("Invalid Product Id")
+        
+                    var productDoc = documents[0];
+        
+                    // Update the product rating if it already exists; otherwise create a new product rating object.
+                    if (productDoc.Rating && productDoc.Rating.score && productDoc.Rating.weight) {
+                        var updatedRating = {
+                            weight: productDoc.Rating.weight + 1,
+                            score: (productDoc.Rating.score * productDoc.Rating.weight + rating) / (productDoc.Rating.weight + 1)
+                        }
+                        productDoc.Rating = updatedRating;
+                    } else {
+                        productDoc.Rating = {
+                            score: rating,
+                            weight: 1
+                        };
+                    }
+        
+                    // Replace the existing document.
+                    var isAccepted = collection.replaceDocument(productDoc._self, productDoc, {}, function (err, updatedDocument) {
+                        if (error) throw error;
+        
+                        callback(error, updatedDocument);
+                    });
+        
+                    if (!isAccepted) throw new Error("Failed to update product document.");
+                });
+        
+                if (!isAccepted) throw new Error("Failed to query product document.");
+            }
+        }
+
+9.	Click **Execute** in the top bar to finish creating the Stored Procedure.
+
+10. Expand StoredProcedures in the left-navigation to see your new Stored Procedure.
+
+11. Let's review a product in our dataset. Right click the StoredProcedure to open a context menu and then click **Execute StoredProcedure**.
+
+	![Screen shot of the DocumentDB Studio][18]
+
+12. Fill in the following input parameters in the Execute StoredProcedure pane:
+
+		"BK-M38S-42"
+		"Andrew Liu"
+		10
+		"This mountain bike rocks!"
+
+	![Screen shot of the DocumentDB Studio][19]
+
+13.	Click **Execute** in the top bar to finish executing the Stored Procedure.
+
+	In the response, we can see the following Ratings object was appended to the appropriate product document:
+
+	    "Rating": {
+	        "score": 10,
+	        "weight": 1
+	    }
+
+	And a new review document has been created:
+
+		{
+		    "productNumber": "BK-M38S-42",
+		    "reviewer": "Andrew Liu",
+		    "rating": 10,
+		    "comment": "This mountain bike rocks!"
+		}
+
+14. Let's add a second review for the product. Repeat steps 11 - 13 with a different set of input parameters:
+
+		"BK-M38S-42"
+		"Stephen Baron"
+		0
+		"This mountain bike is terrible!"
+
+15. In the response, we can see the product's Rating object has been updated:
+
+	    "Rating": {
+	        "weight": 2,
+	        "score": 5
+	    }
+
+	And the following review document has been created:
+
+		{
+		   "productNumber": "BK-M38S-42",
+		   "reviewer": "Stephen Baron",
+		   "rating": 0,
+		   "comment": "This mountain bike is terrible!"
+		}
+
+<a name="cleanup"></a>
+##Appendix - Cleanup
+
+In this task you will learn how to delete the DocumentDB account you created in the previous sections.
+
+1. In your browser, go to [the Azure management portal](https://portal.azure.com/), and sign in with your Azure credentials.
+
+2. Click **BROWSE** in the Navigation hub on the left and then **DocumentDB accounts**.
+
+3. Click your documentDB account and in the details blade that opens, click **Delete**.
+
+	![Accessing the just created DocumentDB account][20]
+
+4. In the confirmation blade that appears, type your documentDB account name and click **Delete**. The account will be deleted.
+
+	![Confirming deletion of DocumentDB account][21]
+
+
+##Summary
+
+By completing this lab you have learned how to get started with Azure DocumentDB. This includes creating a new account, importing data, running queries, and executing a stored procedure. For more information, please check out our [website](http://www.documentdb.com).
 
 <!--Image references-->
+[0]: media/queryplayground.png
 [1]: media/ca1.png
 [2]: media/ca2.png
 [3]: media/ca3.png
@@ -213,3 +463,12 @@ The DocumentDB Query Explorer enables you to create, edit, and run queries again
 [12]: media/viewresults.png
 [13]: media/queryexplorerpart.png
 [14]: media/queryexplorerinitial.png
+[15]: media/docdbstudio-addaccount.png
+[16]: media/docdbstudio-sproc-feed.png
+[17]: media/docdbstudio-sproc-menu.png
+[18]: media/docdbstudio-sproc-menu2.png
+[19]: media/docdbstudio-sproc-input.png
+[20]: media/accessing-the-new-documentdb-account.png
+[21]: media/confirm-deletion-of-documentdb-account.png
+
+
