@@ -6,6 +6,8 @@ In this lab, you will learn how to:
 
  * [Create a DocumentDB database account](#creating-a-documentdb-database-account)
  * [Import data using the DocumentDB data migration tool](#import-data-to-documentdb)
+ * [Run queries using the DocumentDB Query Explorer](#run-queries-using-query-explorer)
+ * 
 
 <a name="creating-a-documentdb-database-account"></a>
 ## Create a DocumentDB database account
@@ -74,7 +76,7 @@ The migration tool is open source and can be found on GitHub in [this repository
 
 The JSON file source importer option allows you to import one or more single document JSON files or JSON files that each contain an array of JSON documents.  When adding folders that contain JSON files to import, you have the option of recursively searching for files in subfolders.
 
-1.  Download the sample JSON data set from our Github repository.
+1.  Download the [sample JSON data set](https://raw.githubusercontent.com/aliuy/azure-documentdb-labs/master/DataCamp/AWProductsAndCategories.json) from our Github repository.
 
 2.	Download the migration tool from the [Microsoft Download Center](http://www.microsoft.com/downloads/details.aspx?FamilyID=cda7703a-2774-4c07-adcc-ad02ddc1a44d).
 
@@ -122,6 +124,80 @@ The JSON file source importer option allows you to import one or more single doc
 
 	![Screenshot of results][12]
 
+<a name="run-queries-using-query-explorer"></a>
+##  Run queries using the DocumentDB Query Explorer
+
+The DocumentDB Query Explorer enables you to create, edit, and run queries against a DocumentDB collection. The Query Explorer can be launched from the Azure Portal from any of the DocumentDB account, database, and collection blades.
+  
+1. Near the bottom of each DocumentDB blade is a **Developer Tools** lens, which contains the **Query Explorer** tile.
+	
+	![Screenshot of Query Explorer part][13] 
+
+2. Simply click the tile to launch Query Explorer.
+
+	![Screenshot of Query Explorer][14]
+
+3. Select the Database and Collection you created in the previous section.
+
+4. Try running following queries, and examine the query results:
+
+	* Grab all the product documents
+
+			SELECT *
+			FROM Products
+
+	* Select a specific product by ProductNumber
+
+			SELECT *
+			FROM Products p
+			WHERE p.ProductNumber = "BK-M38S-42"
+
+	* Select a specific properties
+	
+		> Note: the referencing hierarchy in the SELECT clause.
+
+			SELECT	p.id, p.Name, p.Description,
+					p.Size, p.Weight,
+					p.Category.Name as Category
+			FROM Products p
+			WHERE p.ProductNumber = "BK-M38S-42"
+
+	* Now try using the [advanced query operators](http://azure.microsoft.com/en-us/documentation/articles/documentdb-sql-query/#built-in-functions), such as the `IN` operator.
+
+			SELECT p.id, p.Name
+			FROM Products p
+			WHERE p.id IN ("680","706","707","708")
+
+	* Get another type of document in this collection
+
+		 > Note: the nested arrays inside the documents from the query result.
+
+			SELECT *
+			FROM ProductCategories pc 
+			WHERE pc.DocType = "ProductCategory"
+
+	* Use the `JOIN` operator to perform a cross-product with nested array elements.
+
+			SELECT pc.CategoryName, c.SubCategoryName as SubCategory
+			FROM ProductCategories pc 
+			JOIN c IN pc.SubCategories
+			WHERE pc.DocType = "ProductCategory"
+
+	* You can construct JSON as part of the query projection.
+
+			SELECT {
+				"category": pc.CategoryName,
+				"subcategory": c.SubCategoryName,
+				"categoryid": pc.CategoryId*10000+c.SubCategoryId
+			} 
+			AS productcategory
+			FROM ProductCategories pc 
+			JOIN c IN pc.SubCategories
+			WHERE pc.DocType = "ProductCategory"
+
+## Create and execute a stored procedure using DocumentDB Studio
+
+
 <!--Image references-->
 [1]: media/ca1.png
 [2]: media/ca2.png
@@ -135,7 +211,5 @@ The JSON file source importer option allows you to import one or more single doc
 [10]: media/keys.png
 [11]: media/summary.png
 [12]: media/viewresults.png
-
-[How to: Create a DocumentDB account]: #Howto
-[Next steps]: #NextSteps
-[documentdb-manage]:documentdb-manage.md
+[13]: media/queryexplorerpart.png
+[14]: media/queryexplorerinitial.png
