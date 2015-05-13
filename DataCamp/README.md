@@ -161,11 +161,21 @@ The DocumentDB Query Explorer enables you to create, edit, and run queries again
 			FROM Products p
 			WHERE p.ProductNumber = "BK-M38S-42"
 
-	* Now try using the [advanced query operators](http://azure.microsoft.com/en-us/documentation/articles/documentdb-sql-query/#built-in-functions), such as the `IN` operator.
+	* Now try using the [advanced query operators](http://azure.microsoft.com/en-us/documentation/articles/documentdb-sql-query/#in-keyword), such as the `IN` operator.
 
 			SELECT p.id, p.Name
 			FROM Products p
 			WHERE p.id IN ("680","706","707","708")
+
+	* Use [built in system functions](http://azure.microsoft.com/en-us/documentation/articles/documentdb-sql-query/#built-in-functions) to convert weight from grams to pounds
+
+			SELECT p.id, p.Name, p.Description,
+			p.Size, 
+			p.Weight as WeightGrams,
+			ROUND(p.Weight*0.0022046) as WeightLbs,
+			p.Category.Name as Category
+			FROM Products p
+			WHERE p.ProductNumber = "BK-M38S-42"
 
 	* Get another type of document in this collection
 
@@ -470,5 +480,3 @@ By completing this lab you have learned how to get started with Azure DocumentDB
 [19]: media/docdbstudio-sproc-input.png
 [20]: media/accessing-the-new-documentdb-account.png
 [21]: media/confirm-deletion-of-documentdb-account.png
-
-
