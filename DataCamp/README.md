@@ -435,6 +435,45 @@ Let's get started...
 		   "comment": "This mountain bike is terrible!"
 		}
 
+16.	Now let's try to add an invalid review for the product to demonstrate the robust qualities of Stored Procedures. Stored Procedures enable multi-document transactions and automatically rollback transactions whenever an exception is thrown. For example, you may want to throw an exception and rollback if your input parameters fail validation.
+
+	Let's try running the Stored Procedure again with another set of parameters:
+
+		"BK-M38S-42"
+		"John Macintyre"
+		"An Invalid Rating"
+		"I like IPAs!"
+
+17. In the response, we can see an exception is thrown and therefore the product document has not been updated:
+
+		Microsoft.Azure.Documents.DocumentClientException: Message: {
+		    "Errors": ["Encountered exception while executing Javascript. Exception = Error: The rating is invalid.
+		                Stack trace: Error: The rating is invalid.
+		                    at reviewProduct(reviewProduct.js: 18: 36)
+		                    at __docDbMain(reviewProduct.js: 105: 5)
+		                    at Unknown script code(reviewProduct.js: 1: 2)
+		            "]
+		}
+
+18. We can verify that the product document has not been updated by querying for it:
+
+		SELECT products.Rating
+		FROM products
+		WHERE products.ProductNumber = "BK-M38S-42"
+
+	which returns:
+
+		[{
+		    Rating: {
+		        weight: 2,
+		        score: 5
+		    }
+		}]
+
+	> Note: you can use the Azure DocumentDB Studio to query for documents.
+	
+	![Screen shot of the DocumentDB Studio][22]
+
 <a name="cleanup"></a>
 ##Appendix - Cleanup
 
@@ -480,3 +519,4 @@ By completing this lab you have learned how to get started with Azure DocumentDB
 [19]: media/docdbstudio-sproc-input.png
 [20]: media/accessing-the-new-documentdb-account.png
 [21]: media/confirm-deletion-of-documentdb-account.png
+[22]: media/docdbstudio-query-results.png
